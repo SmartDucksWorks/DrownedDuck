@@ -1,0 +1,103 @@
+name: Build & Release SmartDucks ESP-01S Firmware (Optimized)
+
+on:
+  push:
+    tags:
+      - 'v*'   # Trigger only on version tags (e.g. v1.0.1)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧩 Checkout source
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+        with:
+          version: latest
+
+      - name: 🧠 Install ESP8266 core
+        run: |
+          arduino-cli config init
+          arduino-cli config set board_manager.additional_urls https://arduino.esp8266.com/stable/package_esp8266com_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp8266:esp8266
+
+      - name: 🏗️ Compile SmartDucks firmware (ESP-01S Optimized)
+        run: |
+          mkdir -p build
+          TAG_NAME=${GITHUB_REF_NAME}
+          echo "🔧 Building SmartDucks firmware ${TAG_NAME}"
+
+          arduino-cli compile \
+            --fqbn esp8266:esp8266:generic:CpuFrequency=80,FlashSize=1M512,FlashMode=dout,Debug=Disabled,SSL=basic,LwIPVariant=v2LowerMemory \
+            --build-property "build.extra_flags=-Os -fno-exceptions -ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--relax -DNDEBUG" \
+            --output-dir build src/main.ino
+
+          BIN_FILE=$(ls build/*.bin | head -n 1)
+          NEW_NAME="smartducks-${TAG_NAME}-esp01s.bin"
+          mv "$BIN_FILE" "build/${NEW_NAME}"
+
+          # Calculate MD5 checksum
+          MD5=$(md5sum "build/${NEW_NAME}" | cut -d ' ' -f1)
+
+          # Create version manifest
+          REPO=${{ github.repository }}
+          cat <<EOF > build/version.json
+          {
+            "name": "SmartDucks ESP-01S Firmware",
+            "version": "${TAG_NAME}",
+            "board": "esp01s",
+            "url": "https://github.com/${REPO}/releases/download/${TAG_NAME}/${NEW_NAME}",
+            "md5": "${MD5}",
+            "optimized": true,
+            "released": "${{ github.event.head_commit.timestamp }}"
+          }
+          EOF
+
+          echo "✅ Build complete."
+          du -h build/${NEW_NAME}
+          cat build/version.json
+
+      - name: 📦 Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartducks-esp01s-firmware
+          path: build/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: smartducks-esp01s-firmware
+          path: build/
+
+      - name: 🚀 Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SmartDucks ESP-01S Firmware ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body: |
+            🦆 **SmartDucks ESP-01S Firmware (Optimized Build)**  
+            **Version:** ${{ github.ref_name }}  
+            **Date:** ${{ github.event.head_commit.timestamp }}  
+
+            ✅ Deep-sleep, MD5-verified OTA, Safe-mode recovery  
+            ⚙️ Built with compact flags and low-memory settings  
+            🔒 Basic SSL and lean network stack  
+
+            Use this binary for SmartDucks field nodes.
+
+          files: |
+            build/*.bin
+            build/version.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
