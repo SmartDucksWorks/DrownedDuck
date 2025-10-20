@@ -14,9 +14,9 @@
 #include <EEPROM.h>
 
 // ======== CONFIGURATION ========
-const char* WIFI_SSID  = "YOUR_WIFI";
-const char* WIFI_PASS  = "YOUR_PASS";
-const char* VERSION_URL = "https://github.com/SmartDucks/SmartDucksFirmware/releases/latest/download/version.json";
+const char* WIFI_SSID  = "RebelScum";
+const char* WIFI_PASS  = "FengHuangR2D2#ShenLung";
+const char* VERSION_URL = "https://github.com/SmartDucksWorks/DrownedDuck/releases/latest/download/version.json";
 const char* CURRENT_VERSION = "v1.0.0";
 
 const uint8_t EEPROM_SIZE = 64;
