@@ -4,7 +4,7 @@
  * ------------------------------------------------------------
  * Version: v1.0.0
  * Target:  ESP8266 ESP-01S (1 MB flash)
- * Author:  SmartDucks Team
+ * Author:  SmartDucks.Works Team
  **************************************************************/
 
 #include <ESP8266WiFi.h>
