@@ -29,7 +29,11 @@ jobs:
         run: |
           mkdir -p build
           TAG_NAME=${GITHUB_REF_NAME}
-          echo "🔧 Building SmartDucks firmware ${TAG_NAME}"
+          REPO=${{ github.repository }}
+          REPO_NAME=$(basename $REPO)
+          ORG_NAME=$(dirname $REPO)
+
+          echo "🔧 Building SmartDucks firmware ${TAG_NAME} for ${REPO}"
 
           arduino-cli compile \
             --fqbn esp8266:esp8266:generic:CpuFrequency=80,FlashSize=1M512,FlashMode=dout,Debug=Disabled,SSL=basic,LwIPVariant=v2LowerMemory \
@@ -43,13 +47,13 @@ jobs:
           # Calculate MD5 checksum
           MD5=$(md5sum "build/${NEW_NAME}" | cut -d ' ' -f1)
 
-          # Create version manifest
-          REPO=${{ github.repository }}
+          # Auto-generate version manifest with correct repo/org
           cat <<EOF > build/version.json
           {
             "name": "SmartDucks ESP-01S Firmware",
             "version": "${TAG_NAME}",
             "board": "esp01s",
+            "repo": "${REPO}",
             "url": "https://github.com/${REPO}/releases/download/${TAG_NAME}/${NEW_NAME}",
             "md5": "${MD5}",
             "optimized": true,
@@ -57,7 +61,7 @@ jobs:
           }
           EOF
 
-          echo "✅ Build complete."
+          echo "✅ Build complete for ${REPO}."
           du -h build/${NEW_NAME}
           cat build/version.json
 
